@@ -101,6 +101,7 @@ public class SatelliteServiceImpl implements SatelliteService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<Satellite> findFissiDa10Anni() {
 		return (List<Satellite>) repository.findByStatoAndDataLancioLessThan(StatoSatellite.FISSO, new Date(2012, 01, 01));
 	}

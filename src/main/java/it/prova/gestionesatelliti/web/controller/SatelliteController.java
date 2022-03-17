@@ -1,5 +1,6 @@
 package it.prova.gestionesatelliti.web.controller;
 
+import java.util.Date;
 import java.util.List;
 
 import javax.validation.Valid;
@@ -18,15 +19,16 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import it.prova.gestionesatelliti.model.Satellite;
+import it.prova.gestionesatelliti.model.StatoSatellite;
 import it.prova.gestionesatelliti.service.SatelliteService;
 
 @Controller
 @RequestMapping(value = "/satellite")
 public class SatelliteController {
-	
+
 	@Autowired
 	private SatelliteService satelliteService;
-	
+
 	@GetMapping
 	public ModelAndView listaAll() {
 		ModelAndView mv = new ModelAndView();
@@ -35,19 +37,19 @@ public class SatelliteController {
 		mv.setViewName("satellite/list");
 		return mv;
 	}
-	
+
 	@GetMapping("/search")
 	public String search() {
 		return "satellite/search";
 	}
-	
+
 	@PostMapping("/list")
 	public String listByExample(Satellite example, ModelMap model) {
 		List<Satellite> results = satelliteService.findByExample(example);
 		model.addAttribute("satellite_list_attribute", results);
 		return "satellite/list";
 	}
-	
+
 	@GetMapping("/insert")
 	public String create(Model model) {
 		model.addAttribute("insert_satellite_attr", new Satellite());
@@ -72,7 +74,7 @@ public class SatelliteController {
 		model.addAttribute("show_satellite_attr", satelliteService.caricaSingoloElemento(idSatellite));
 		return "satellite/show";
 	}
-	
+
 	@GetMapping("/edit/{idSatellite}")
 	public String edit(@PathVariable(required = true) Long idSatellite, Model model) {
 		model.addAttribute("edit_satellite_attr", satelliteService.caricaSingoloElemento(idSatellite));
@@ -83,6 +85,12 @@ public class SatelliteController {
 	public String edit(@Valid @ModelAttribute("edit_satellite_attr") Satellite satellite, BindingResult result,
 			RedirectAttributes redirectAttrs) {
 
+		if ((satellite.getDataRientro() == null && satellite.getStato().equals(StatoSatellite.DISATTIVATO))
+				|| satellite.getDataLancio().after(satellite.getDataRientro())) {
+			result.rejectValue("dataLancio", "dataLancio.dataRientro.rangeInValue");
+			result.rejectValue("dataRientro", "dataRientro.dataLancio.rangeInValue");
+		}
+
 		if (result.hasErrors())
 			return "satellite/edit";
 
@@ -91,10 +99,16 @@ public class SatelliteController {
 		redirectAttrs.addFlashAttribute("successMessage", "Operazione eseguita correttamente");
 		return "redirect:/satellite";
 	}
-	
+
 	@GetMapping("/delete/{idSatellite}")
-	public String prepareDelete(@PathVariable(required = true) Long idSatellite, Model model) {
-		model.addAttribute("delete_satellite_attr", satelliteService.caricaSingoloElemento(idSatellite));
+	public String prepareDelete(@PathVariable(required = true) Long idSatellite, Model model, RedirectAttributes redirectAttrs) {
+
+		Satellite satelliteTest = satelliteService.caricaSingoloElemento(idSatellite);
+		if (satelliteTest.getDataLancio().before(new Date()) || satelliteTest.getDataRientro().after(new Date())) {
+			redirectAttrs.addFlashAttribute("erroreMessage", "Operazione non eseguita correttamente");
+			return "redirect:/satellite";
+		}
+			model.addAttribute("delete_satellite_attr", satelliteService.caricaSingoloElemento(idSatellite));
 		return "satellite/delete";
 	}
 
@@ -106,21 +120,21 @@ public class SatelliteController {
 		redirectAttrs.addFlashAttribute("successMessage", "Operazione eseguita correttamente");
 		return "redirect:/satellite";
 	}
-	
+
 	@GetMapping("/lanciatiDa2Anni")
 	public String listLanciatiDa2Anni(ModelMap model) {
 		List<Satellite> results = satelliteService.findLanciatiDa2Anni();
 		model.addAttribute("satellite_list_attribute", results);
 		return "satellite/list";
 	}
-	
+
 	@GetMapping("/disattivatiInOrbita")
 	public String listDisattivatiInOrbita(ModelMap model) {
 		List<Satellite> results = satelliteService.findDisattivatiInOrbita();
 		model.addAttribute("satellite_list_attribute", results);
 		return "satellite/list";
 	}
-	
+
 	@GetMapping("/fissiDa10Anni")
 	public String listFissiDa10Anni(ModelMap model) {
 		List<Satellite> results = satelliteService.findFissiDa10Anni();
