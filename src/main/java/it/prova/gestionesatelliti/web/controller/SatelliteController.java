@@ -101,14 +101,15 @@ public class SatelliteController {
 	}
 
 	@GetMapping("/delete/{idSatellite}")
-	public String prepareDelete(@PathVariable(required = true) Long idSatellite, Model model, RedirectAttributes redirectAttrs) {
+	public String prepareDelete(@PathVariable(required = true) Long idSatellite, Model model,
+			RedirectAttributes redirectAttrs) {
 
 		Satellite satelliteTest = satelliteService.caricaSingoloElemento(idSatellite);
 		if (satelliteTest.getDataLancio().before(new Date()) || satelliteTest.getDataRientro().after(new Date())) {
 			redirectAttrs.addFlashAttribute("erroreMessage", "Operazione non eseguita correttamente");
 			return "redirect:/satellite";
 		}
-			model.addAttribute("delete_satellite_attr", satelliteService.caricaSingoloElemento(idSatellite));
+		model.addAttribute("delete_satellite_attr", satelliteService.caricaSingoloElemento(idSatellite));
 		return "satellite/delete";
 	}
 
@@ -140,6 +141,42 @@ public class SatelliteController {
 		List<Satellite> results = satelliteService.findFissiDa10Anni();
 		model.addAttribute("satellite_list_attribute", results);
 		return "satellite/list";
+	}
+
+	@GetMapping("/lancia/{idSatellite}")
+	public String lancia(@PathVariable(required = true) Long idSatellite, RedirectAttributes redirectAttrs) {
+
+		Satellite satellitaInLancio = satelliteService.caricaSingoloElemento(idSatellite);
+
+		if (satellitaInLancio.getDataLancio() != null || satellitaInLancio.getDataRientro() != null) {
+			redirectAttrs.addFlashAttribute("erroreMessage", "Operazione non eseguita correttamente");
+			return "redirect:/satellite";
+		}
+
+		satellitaInLancio.setDataLancio(new Date());
+		satellitaInLancio.setStato(StatoSatellite.IN_MOVIMENTO);
+		satelliteService.aggiorna(satellitaInLancio);
+
+		redirectAttrs.addFlashAttribute("successMessage", "Operazione eseguita correttamente");
+		return "redirect:/satellite";
+	}
+
+	@GetMapping("/rientra/{idSatellite}")
+	public String rientra(@PathVariable(required = true) Long idSatellite, RedirectAttributes redirectAttrs) {
+
+		Satellite satellitaInRientro = satelliteService.caricaSingoloElemento(idSatellite);
+
+		if (satellitaInRientro.getDataRientro() != null || satellitaInRientro.getDataLancio() == null) {
+			redirectAttrs.addFlashAttribute("erroreMessage", "Operazione non eseguita correttamente");
+			return "redirect:/satellite";
+		}
+
+		satellitaInRientro.setDataRientro(new Date());
+		satellitaInRientro.setStato(StatoSatellite.DISATTIVATO);
+		satelliteService.aggiorna(satellitaInRientro);
+
+		redirectAttrs.addFlashAttribute("successMessage", "Operazione eseguita correttamente");
+		return "redirect:/satellite";
 	}
 
 }
